@@ -23,10 +23,11 @@
 
         <div class="panel stats">
           <h2>Player</h2>
+          <div class="stat-row"><span>Name:</span><span id="player-name">Gary</span></div>
           <div class="stat-row"><span>HP:</span><span id="player-health">100</span></div>
           <div class="stat-row"><span>Melee:</span><span id="player-melee">8</span></div>
           <div class="stat-row"><span>Ranged:</span><span id="player-ranged">6</span></div>
-          <div class="stat-row"><span>Weapon:</span><span id="player-weapon">Weak Melee / Weak Pistol</span></div>
+          <div class="stat-row"><span>Weapon:</span><span id="player-weapon">Gun 1 / Melee 1</span></div>
         </div>
 
         <div class="panel stats">
@@ -48,11 +49,9 @@
 
         <div class="scene-shell">
           <div class="sprite player-sprite">
-            <span>YOU</span>
+            <img id="player-sprite" src="characters/gary.png" alt="Gary">
           </div>
-          <div class="sprite enemy-sprite" id="enemy-sprite">
-            <span>ENEMY</span>
-          </div>
+          <div class="sprite enemy-sprite" id="enemy-sprite"></div>
         </div>
       </div>
     </section>

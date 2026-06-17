@@ -1,10 +1,10 @@
 const levels = [
   { name: 'Classroom', enemyType: 'Zombie', enemySpriteText: '🧟', enemyHp: 40, enemyDamage: 8, map: generateLevelMap('classroom') },
   { name: 'Hallway', enemyType: 'Zombie', enemySpriteText: '🧟', enemyHp: 48, enemyDamage: 10, map: generateLevelMap('hallway') },
-  { name: 'Library', enemyType: 'Big Zombie', enemySpriteText: '💀', enemyHp: 70, enemyDamage: 14, map: generateLevelMap('library') },
-  { name: 'Principle Office', enemyType: 'Big Zombie', enemySpriteText: '💀', enemyHp: 78, enemyDamage: 16, map: generateLevelMap('office') },
+  { name: 'Library', enemyType: 'Library Threat', enemySpriteText: '📚', enemyHp: 70, enemyDamage: 14, map: generateLevelMap('library') },
+  { name: 'Principle Office', enemyType: 'Office Guard', enemySpriteText: '👔', enemyHp: 78, enemyDamage: 16, map: generateLevelMap('office') },
   { name: 'Cafeteria', enemyType: 'Big Zombie', enemySpriteText: '💀', enemyHp: 86, enemyDamage: 18, map: generateLevelMap('cafeteria') },
-  { name: 'Gyms', enemyType: 'Big Zombie', enemySpriteText: '💀', enemyHp: 92, enemyDamage: 20, map: generateLevelMap('gyms') },
+  { name: 'Gyms', enemyType: 'Gym Monster', enemySpriteText: '🏋️', enemyHp: 92, enemyDamage: 20, map: generateLevelMap('gyms') },
   { name: 'Yard', enemyType: 'Military Troop', enemySpriteText: '🎖️', enemyHp: 110, enemyDamage: 22, map: generateLevelMap('yard') },
 ];
 
@@ -39,13 +39,57 @@ function chunkMap(flatmap) {
 }
 
 const player = {
+  name: 'Gary',
   maxHealth: 100,
   health: 100,
   melee: 8,
   ranged: 6,
-  weapon: 'Weak Melee / Weak Pistol',
+  meleeLevel: 1,
+  gunLevel: 1,
+  weapon: 'Gun 1 / Melee 1',
   position: { x: 1, y: 1 },
 };
+
+function getWeaponLabel() {
+  return `Gun ${player.gunLevel} / Melee ${player.meleeLevel}`;
+}
+
+function getEnemySpriteForLevel(levelName) {
+  switch (levelName) {
+    case 'Classroom':
+    case 'Hallway':
+      return 'characters/zombie.png';
+    case 'Library':
+      return 'characters/libarian.png';
+    case 'Principle Office':
+      return 'characters/coach.png';
+    case 'Cafeteria':
+      return 'characters/buffzombie.png';
+    case 'Gyms':
+      return 'characters/buffzombie.png';
+    case 'Yard':
+      return 'characters/soldier.png';
+    default:
+      return 'characters/zombie.png';
+  }
+}
+
+function setArenaBackground(levelName) {
+  const levelBackgrounds = {
+    'Classroom': 'backgrounds/classroom.png',
+    'Hallway': 'backgrounds/hallway.png',
+    'Library': 'backgrounds/library.png',
+    'Principle Office': 'backgrounds/principles office.png',
+    'Cafeteria': 'backgrounds/caff.png',
+    'Gyms': 'backgrounds/gym.png',
+    'Yard': 'backgrounds/yard.png',
+  };
+
+  const backgroundUrl = levelBackgrounds[levelName] || 'backgrounds/classroom.png';
+  arenaEl.style.backgroundImage = `url('${backgroundUrl}')`;
+  arenaEl.style.backgroundSize = 'cover';
+  arenaEl.style.backgroundPosition = 'center';
+}
 
 let currentLevelIndex = 0;
 let enemy = null;
@@ -56,9 +100,11 @@ let gameLoopInterval = null;
 
 const mapGridEl = document.getElementById('map-grid');
 const mapHintEl = document.getElementById('map-hint');
+const arenaEl = document.querySelector('.arena');
 
 const levelNameEl = document.getElementById('level-name');
 const levelCounterEl = document.getElementById('level-counter');
+const playerNameEl = document.getElementById('player-name');
 const playerHealthEl = document.getElementById('player-health');
 const playerMeleeEl = document.getElementById('player-melee');
 const playerRangedEl = document.getElementById('player-ranged');
@@ -82,7 +128,9 @@ function initGame() {
   player.health = player.maxHealth;
   player.melee = 8;
   player.ranged = 6;
-  player.weapon = 'Weak Melee / Weak Pistol';
+  player.meleeLevel = 1;
+  player.gunLevel = 1;
+  player.weapon = getWeaponLabel();
   player.position = { x: 1, y: 1 };
   gameOver = false;
   isWaitingForUpgrade = false;
@@ -106,11 +154,12 @@ function setEnemyForCurrentLevel() {
     maxHealth: level.enemyHp,
     health: level.enemyHp,
     baseDamage: level.enemyDamage,
-    spriteText: level.enemySpriteText,
+    spriteImage: getEnemySpriteForLevel(level.name),
     position: assignEnemyStart(level.name),
   };
 
-  enemySpriteEl.innerHTML = `<span>${enemy.spriteText}</span>`;
+  enemySpriteEl.innerHTML = `<img src="${enemy.spriteImage}" alt="${enemy.name}">`;
+  setArenaBackground(level.name);
   mapHintEl.textContent = 'Use arrow keys to move. The enemy will chase you each turn.';
 }
 
@@ -118,6 +167,7 @@ function updateUi() {
   const level = levels[currentLevelIndex];
   levelNameEl.textContent = level.name;
   levelCounterEl.textContent = `Level ${currentLevelIndex + 1} / 7`;
+  playerNameEl.textContent = player.name;
   playerHealthEl.textContent = player.health;
   playerMeleeEl.textContent = player.melee;
   playerRangedEl.textContent = player.ranged;
@@ -293,12 +343,14 @@ function chooseEnemyMove() {
 function handleUpgrade(choice) {
   if (!isWaitingForUpgrade) return;
   if (choice === 'melee') {
+    player.meleeLevel += 1;
     player.melee += 4;
-    player.weapon = 'Sharpened Melee / Weak Pistol';
+    player.weapon = getWeaponLabel();
     logMessage('Melee upgraded! Your strikes are stronger now.', 'success');
   } else {
+    player.gunLevel += 1;
     player.ranged += 4;
-    player.weapon = 'Weak Melee / Improved Rifle';
+    player.weapon = getWeaponLabel();
     logMessage('Ranged upgraded! Your shots pack more punch.', 'success');
   }
 
