@@ -11,10 +11,11 @@ const levels = [
 function generateLevelMap(type) {
   const createSimpleMap = () => {
     const map = [];
-    for (let y = 0; y < 9; y++) {
+    const size = 30;
+    for (let y = 0; y < size; y++) {
       const row = [];
-      for (let x = 0; x < 9; x++) {
-        if (x === 0 || x === 8 || y === 0 || y === 8) {
+      for (let x = 0; x < size; x++) {
+        if (x === 0 || x === size - 1 || y === 0 || y === size - 1) {
           row.push('wall');
         } else {
           row.push('floor');
@@ -30,8 +31,9 @@ function generateLevelMap(type) {
 
 function chunkMap(flatmap) {
   const grid = [];
-  for (let y = 0; y < 9; y += 1) {
-    grid.push(flatmap.slice(y * 9, y * 9 + 9));
+  const size = 30;
+  for (let y = 0; y < size; y += 1) {
+    grid.push(flatmap.slice(y * size, y * size + size));
   }
   return grid;
 }
@@ -68,10 +70,9 @@ const enemySpriteEl = document.getElementById('enemy-sprite');
 const messageBoxEl = document.getElementById('message-box');
 const meleeButton = document.getElementById('melee-button');
 const rangedButton = document.getElementById('ranged-button');
-const skipButton = document.getElementById('skip-button');
-const upgradePanel = document.getElementById('upgrade-panel');
 const upgradeMeleeButton = document.getElementById('upgrade-melee');
 const upgradeRangedButton = document.getElementById('upgrade-ranged');
+const upgradeOverlay = document.getElementById('upgrade-overlay');
 const endPanel = document.getElementById('end-panel');
 const endTitle = document.getElementById('end-title');
 const restartButton = document.getElementById('restart-button');
@@ -86,7 +87,7 @@ function initGame() {
   gameOver = false;
   isWaitingForUpgrade = false;
   endPanel.classList.add('hidden');
-  upgradePanel.classList.add('hidden');
+  upgradeOverlay.classList.add('hidden');
   if (gameLoopInterval) clearInterval(gameLoopInterval);
   setEnemyForCurrentLevel();
   updateUi();
@@ -127,7 +128,6 @@ function updateUi() {
   const disabled = gameOver || isWaitingForUpgrade;
   meleeButton.disabled = disabled;
   rangedButton.disabled = disabled;
-  skipButton.disabled = disabled;
   renderMap();
 }
 
@@ -275,7 +275,7 @@ function handleEnemyDefeated() {
   isWaitingForUpgrade = true;
   if (gameLoopInterval) clearInterval(gameLoopInterval);
   updateUi();
-  upgradePanel.classList.remove('hidden');
+  upgradeOverlay.classList.remove('hidden');
   logMessage('Choose an upgrade before the next level.', 'info');
 }
 
@@ -305,7 +305,7 @@ function handleUpgrade(choice) {
   player.health = Math.min(player.maxHealth, player.health + 18);
   logMessage('You heal a little between fights and enter the next level ready.', 'info');
   isWaitingForUpgrade = false;
-  upgradePanel.classList.add('hidden');
+  upgradeOverlay.classList.add('hidden');
   setEnemyForCurrentLevel();
   updateUi();
   startGameLoop();
@@ -382,7 +382,6 @@ function startGameLoop() {
 
 meleeButton.addEventListener('click', () => handlePlayerAction('melee'));
 rangedButton.addEventListener('click', () => handlePlayerAction('ranged'));
-skipButton.addEventListener('click', () => handlePlayerAction('skip'));
 upgradeMeleeButton.addEventListener('click', () => handleUpgrade('melee'));
 upgradeRangedButton.addEventListener('click', () => handleUpgrade('ranged'));
 restartButton.addEventListener('click', initGame);
@@ -402,6 +401,12 @@ document.addEventListener('keydown', (event) => {
   }
   if (key === 'arrowright' || key === 'd') {
     movePlayer('right');
+  }
+  if (key === '1') {
+    handlePlayerAction('melee');
+  }
+  if (key === '2') {
+    handlePlayerAction('ranged');
   }
 });
 

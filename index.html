@@ -59,15 +59,16 @@
 
     <section class="control-panel">
       <div class="action-buttons">
-        <button id="melee-button">Melee Attack</button>
-        <button id="ranged-button">Ranged Attack</button>
-        <button id="skip-button">Guard / Wait</button>
+        <button id="melee-button">1 - Melee Attack</button>
+        <button id="ranged-button">2 - Ranged Attack</button>
       </div>
       <div class="message-box" id="message-box"></div>
-      <div class="upgrade-panel hidden" id="upgrade-panel">
-        <h2>Choose Your Upgrade</h2>
-        <button id="upgrade-melee">Upgrade Melee</button>
-        <button id="upgrade-ranged">Upgrade Ranged</button>
+      <div class="upgrade-overlay hidden" id="upgrade-overlay">
+        <div class="upgrade-panel">
+          <h2>Choose Your Upgrade</h2>
+          <button id="upgrade-melee">Upgrade Melee</button>
+          <button id="upgrade-ranged">Upgrade Ranged</button>
+        </div>
       </div>
       <div class="end-panel hidden" id="end-panel">
         <h2 id="end-title">Game Over</h2>

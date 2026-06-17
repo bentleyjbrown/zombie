@@ -104,11 +104,54 @@ header p {
 
 .map-grid {
   display: grid;
-  grid-template-columns: repeat(9, minmax(0, 1fr));
-  gap: 4px;
+  grid-template-columns: repeat(30, minmax(0, 1fr));
+  gap: 2px;
   border-radius: 18px;
   padding: 12px;
   background: rgba(0, 0, 0, 0.18);
+}
+
+.upgrade-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 50;
+  pointer-events: auto;
+}
+
+.upgrade-overlay.hidden {
+  display: none;
+}
+
+.upgrade-overlay .upgrade-panel {
+  width: min(92vw, 420px);
+  background: rgba(18, 22, 35, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 32px 64px rgba(0, 0, 0, 0.45);
+  border-radius: 24px;
+  padding: 28px;
+}
+
+.upgrade-overlay .upgrade-panel h2 {
+  margin-top: 0;
+  font-size: 1.35rem;
+}
+
+.upgrade-overlay .upgrade-panel button {
+  width: 100%;
+  margin-top: 14px;
+}
+
+.upgrade-panel h2 {
+  margin-top: 0;
+  font-size: 1.15rem;
+}
+
+.upgrade-panel button {
+  width: 100%;
+  margin-top: 14px;
 }
 
 .map-cell {
@@ -217,7 +260,6 @@ button:disabled {
 
 #melee-button { background: #f7a129; }
 #ranged-button { background: #64d4a3; }
-#skip-button { background: #7c8db2; }
 #upgrade-melee { background: #f7a129; }
 #upgrade-ranged { background: #64d4a3; }
 #restart-button { background: #5f72ff; color: white; }
