@@ -316,6 +316,20 @@ function canMoveTo(x, y, ignoreId = null) {
   );
 }
 
+function applyMeleeKnockback(enemy) {
+  const dx = enemy.position.x - player.position.x;
+  const dy = enemy.position.y - player.position.y;
+  if (Math.abs(dx) + Math.abs(dy) !== 1) return;
+
+  const knockbackX = enemy.position.x + Math.sign(dx);
+  const knockbackY = enemy.position.y + Math.sign(dy);
+
+  if (canMoveTo(knockbackX, knockbackY) && !isEnemyAt(knockbackX, knockbackY)) {
+    enemy.position = { x: knockbackX, y: knockbackY };
+    logMessage(`${enemy.name} is knocked back!`, 'success');
+  }
+}
+
 function getNextMeleeSprite() {
   const nextLevel = Math.min(player.meleeLevel + 1, 7);
   return `weapons/melee${nextLevel}.png`;
@@ -428,6 +442,9 @@ function handlePlayerAction(action) {
 
   if (damage > 0) {
     showWeaponUse(action);
+    if (action === 'melee') {
+      applyMeleeKnockback(target);
+    }
     if (action === 'ranged') {
       showProjectile(player.position, target.position, getPlayerBulletSprite());
       isShootCooldown = true;
