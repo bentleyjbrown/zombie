@@ -110,7 +110,7 @@ const mapHintEl = document.getElementById('map-hint');
 const arenaEl = document.querySelector('.arena');
 const sceneShellEl = document.getElementById('scene-shell');
 const playerCharacterEl = document.getElementById('player-character');
-const enemyCharacterEl = document.getElementById('enemy-character');
+const enemyCharacterEl = document.getElementById('enemy-characters');
 
 const levelNameEl = document.getElementById('level-name');
 const levelCounterEl = document.getElementById('level-counter');
