@@ -106,6 +106,7 @@ let isWaitingForUpgrade = false;
 let gameOver = false;
 let gameLoopInterval = null;
 let isShootCooldown = false;
+let isMeleeBlockActive = false;
 const shootCooldownMs = 600;
 
 const mapHintEl = document.getElementById('map-hint');
@@ -444,6 +445,7 @@ function handlePlayerAction(action) {
     showWeaponUse(action);
     if (action === 'melee') {
       applyMeleeKnockback(target);
+      isMeleeBlockActive = true;
     }
     if (action === 'ranged') {
       showProjectile(player.position, target.position, getPlayerBulletSprite());
@@ -658,8 +660,13 @@ function startGameLoop() {
         }
       }
 
-      player.health = Math.max(0, player.health - damage);
-      logMessage(text, 'danger');
+      if (isMeleeBlockActive) {
+        logMessage('Your melee strike blocked the enemy attack!', 'success');
+        isMeleeBlockActive = false;
+      } else {
+        player.health = Math.max(0, player.health - damage);
+        logMessage(text, 'danger');
+      }
     });
     
     if (player.health <= 0) {
