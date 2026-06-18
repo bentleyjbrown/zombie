@@ -1,11 +1,11 @@
 const levels = [
-  { name: 'Classroom', enemyType: 'Zombie', enemySpriteText: '🧟', enemyHp: 40, enemyDamage: 8, map: generateLevelMap('classroom') },
-  { name: 'Hallway', enemyType: 'Zombie', enemySpriteText: '🧟', enemyHp: 48, enemyDamage: 10, map: generateLevelMap('hallway') },
-  { name: 'Library', enemyType: 'Library Threat', enemySpriteText: '📚', enemyHp: 70, enemyDamage: 14, map: generateLevelMap('library') },
-  { name: 'Principle Office', enemyType: 'Office Guard', enemySpriteText: '👔', enemyHp: 78, enemyDamage: 16, map: generateLevelMap('office') },
-  { name: 'Cafeteria', enemyType: 'Big Zombie', enemySpriteText: '💀', enemyHp: 86, enemyDamage: 18, map: generateLevelMap('cafeteria') },
-  { name: 'Gyms', enemyType: 'Gym Monster', enemySpriteText: '🏋️', enemyHp: 92, enemyDamage: 20, map: generateLevelMap('gyms') },
-  { name: 'Yard', enemyType: 'Military Troop', enemySpriteText: '🎖️', enemyHp: 110, enemyDamage: 22, map: generateLevelMap('yard') },
+  { name: 'Classroom', enemyType: 'Zombie', enemySpriteText: '🧟', enemyHp: 40, enemyDamage: 8, enemyCount: 3, map: generateLevelMap('classroom') },
+  { name: 'Hallway', enemyType: 'Zombie', enemySpriteText: '🧟', enemyHp: 48, enemyDamage: 10, enemyCount: 3, map: generateLevelMap('hallway') },
+  { name: 'Library', enemyType: 'Librarian', enemySpriteText: '📚', enemyHp: 110, enemyDamage: 18, enemyCount: 1, isBoss: true, map: generateLevelMap('library') },
+  { name: 'Principle Office', enemyType: 'Office Guard', enemySpriteText: '👔', enemyHp: 78, enemyDamage: 16, enemyCount: 3, map: generateLevelMap('office') },
+  { name: 'Cafeteria', enemyType: 'Big Zombie', enemySpriteText: '💀', enemyHp: 86, enemyDamage: 18, enemyCount: 3, map: generateLevelMap('cafeteria') },
+  { name: 'Gyms', enemyType: 'Coach', enemySpriteText: '🏋️', enemyHp: 130, enemyDamage: 22, enemyCount: 1, isBoss: true, map: generateLevelMap('gyms') },
+  { name: 'Yard', enemyType: 'Military Troop', enemySpriteText: '🎖️', enemyHp: 110, enemyDamage: 22, enemyCount: 3, map: generateLevelMap('yard') },
 ];
 
 function generateLevelMap(type) {
@@ -86,21 +86,31 @@ function setArenaBackground(levelName) {
   };
 
   const backgroundUrl = levelBackgrounds[levelName] || 'backgrounds/classroom.png';
-  arenaEl.style.backgroundImage = `url('${backgroundUrl}')`;
-  arenaEl.style.backgroundSize = 'cover';
-  arenaEl.style.backgroundPosition = 'center';
+  if (arenaEl) {
+    arenaEl.style.backgroundImage = `url('${backgroundUrl}')`;
+    arenaEl.style.backgroundSize = 'cover';
+    arenaEl.style.backgroundPosition = 'center';
+  }
+  if (sceneShellEl) {
+    sceneShellEl.style.backgroundImage = `url('${backgroundUrl}')`;
+    sceneShellEl.style.backgroundSize = 'cover';
+    sceneShellEl.style.backgroundPosition = 'center';
+    sceneShellEl.style.backgroundRepeat = 'no-repeat';
+  }
 }
 
 let currentLevelIndex = 0;
-let enemy = null;
+let enemies = [];
 let currentMap = [];
 let isWaitingForUpgrade = false;
 let gameOver = false;
 let gameLoopInterval = null;
 
-const mapGridEl = document.getElementById('map-grid');
 const mapHintEl = document.getElementById('map-hint');
 const arenaEl = document.querySelector('.arena');
+const sceneShellEl = document.getElementById('scene-shell');
+const playerCharacterEl = document.getElementById('player-character');
+const enemyCharacterEl = document.getElementById('enemy-character');
 
 const levelNameEl = document.getElementById('level-name');
 const levelCounterEl = document.getElementById('level-counter');
@@ -112,7 +122,6 @@ const playerWeaponEl = document.getElementById('player-weapon');
 const enemyNameEl = document.getElementById('enemy-name');
 const enemyHealthEl = document.getElementById('enemy-health');
 const enemyTypeEl = document.getElementById('enemy-type');
-const enemySpriteEl = document.getElementById('enemy-sprite');
 const messageBoxEl = document.getElementById('message-box');
 const meleeButton = document.getElementById('melee-button');
 const rangedButton = document.getElementById('ranged-button');
@@ -148,17 +157,19 @@ function setEnemyForCurrentLevel() {
   currentMap = cloneMap(level.map);
   player.position = { x: 1, y: 1 };
 
-  enemy = {
+  const count = level.enemyCount || 1;
+  const positions = assignEnemyStarts(level.name, count);
+  enemies = positions.map((position, index) => ({
     name: `${level.enemyType}`,
     type: level.enemyType,
     maxHealth: level.enemyHp,
     health: level.enemyHp,
     baseDamage: level.enemyDamage,
+    position,
     spriteImage: getEnemySpriteForLevel(level.name),
-    position: assignEnemyStart(level.name),
-  };
+    id: `${level.enemyType.toLowerCase().replace(/\s+/g, '-')}-${index}`,
+  }));
 
-  enemySpriteEl.innerHTML = `<img src="${enemy.spriteImage}" alt="${enemy.name}">`;
   setArenaBackground(level.name);
   mapHintEl.textContent = 'Use arrow keys to move. The enemy will chase you each turn.';
 }
@@ -172,13 +183,14 @@ function updateUi() {
   playerMeleeEl.textContent = player.melee;
   playerRangedEl.textContent = player.ranged;
   playerWeaponEl.textContent = player.weapon;
-  enemyNameEl.textContent = enemy.name;
-  enemyHealthEl.textContent = enemy.health;
-  enemyTypeEl.textContent = enemy.type;
+  const aliveEnemies = enemies.filter((enemy) => enemy.health > 0);
+  enemyNameEl.textContent = aliveEnemies.length > 1 ? `${aliveEnemies.length} enemies` : aliveEnemies[0]?.name || 'None';
+  enemyHealthEl.textContent = aliveEnemies.reduce((total, enemy) => total + enemy.health, 0);
+  enemyTypeEl.textContent = aliveEnemies.length > 1 ? 'Multiple' : aliveEnemies[0]?.type || '---';
   const disabled = gameOver || isWaitingForUpgrade;
   meleeButton.disabled = disabled;
   rangedButton.disabled = disabled;
-  renderMap();
+  renderScene();
 }
 
 function cloneMap(map) {
@@ -192,13 +204,13 @@ function assignEnemyStart(levelName) {
     case 'Hallway':
       return { x: 7, y: 1 };
     case 'Library':
-      return { x: 7, y: 7 };
+      return { x: 14, y: 14 };
     case 'Principle Office':
       return { x: 7, y: 6 };
     case 'Cafeteria':
       return { x: 7, y: 7 };
     case 'Gyms':
-      return { x: 7, y: 1 };
+      return { x: 14, y: 14 };
     case 'Yard':
       return { x: 7, y: 7 };
     default:
@@ -206,25 +218,43 @@ function assignEnemyStart(levelName) {
   }
 }
 
-function renderMap() {
-  mapGridEl.innerHTML = '';
-  const totalRows = currentMap.length;
-  const totalCols = currentMap[0]?.length || 0;
+function assignEnemyStarts(levelName, count) {
+  const first = assignEnemyStart(levelName);
+  const positions = [first];
+  const offsets = [{ x: 2, y: 0 }, { x: -2, y: 0 }, { x: 0, y: 2 }, { x: 0, y: -2 }];
 
-  currentMap.forEach((row, y) => {
-    row.forEach((cellType, x) => {
-      const cell = document.createElement('div');
-      cell.className = `map-cell ${cellType}`;
-
-      if (player.position.x === x && player.position.y === y) {
-        cell.classList.add('player');
-      }
-      if (enemy.position.x === x && enemy.position.y === y) {
-        cell.classList.add('enemy');
-      }
-
-      mapGridEl.appendChild(cell);
+  for (let i = 1; i < count; i += 1) {
+    const offset = offsets[(i - 1) % offsets.length];
+    positions.push({
+      x: Math.max(1, Math.min(28, first.x + offset.x * Math.ceil(i / offsets.length))),
+      y: Math.max(1, Math.min(28, first.y + offset.y * Math.ceil(i / offsets.length))),
     });
+  }
+
+  return positions;
+}
+
+function renderScene() {
+  if (!sceneShellEl) return;
+  const totalRows = currentMap.length;
+  const totalCols = currentMap[0]?.length || 1;
+  const playerX = (player.position.x / (totalCols - 1)) * 100;
+  const playerY = (player.position.y / (totalRows - 1)) * 100;
+  playerCharacterEl.style.left = `${playerX}%`;
+  playerCharacterEl.style.top = `${playerY}%`;
+
+  enemyCharacterEl.innerHTML = '';
+  enemies.forEach((enemyObj) => {
+    if (enemyObj.health <= 0) return;
+    const enemyEl = document.createElement('div');
+    enemyEl.className = 'scene-character enemy';
+    enemyEl.style.left = `${(enemyObj.position.x / (totalCols - 1)) * 100}%`;
+    enemyEl.style.top = `${(enemyObj.position.y / (totalRows - 1)) * 100}%`;
+    const img = document.createElement('img');
+    img.src = enemyObj.spriteImage;
+    img.alt = enemyObj.name;
+    enemyEl.appendChild(img);
+    enemyCharacterEl.appendChild(enemyEl);
   });
 }
 
@@ -265,18 +295,31 @@ function canMoveTo(x, y) {
   );
 }
 
+function getNearestEnemy() {
+  return enemies
+    .filter((enemy) => enemy.health > 0)
+    .sort((a, b) => {
+      const da = Math.abs(player.position.x - a.position.x) + Math.abs(player.position.y - a.position.y);
+      const db = Math.abs(player.position.x - b.position.x) + Math.abs(player.position.y - b.position.y);
+      return da - db;
+    })[0];
+}
+
 function handlePlayerAction(action) {
   if (gameOver || isWaitingForUpgrade) return;
+
+  const target = getNearestEnemy();
+  if (!target) return;
 
   let damage = 0;
   let actionDescription = '';
 
-  const dx = Math.abs(player.position.x - enemy.position.x);
-  const dy = Math.abs(player.position.y - enemy.position.y);
+  const dx = Math.abs(player.position.x - target.position.x);
+  const dy = Math.abs(player.position.y - target.position.y);
   const isAdjacent = (dx <= 1 && dy <= 1) && !(dx === 0 && dy === 0);
 
   if (isAdjacent && action === 'melee') {
-    damage = player.melee + 2;
+    damage = player.melee + 4;
     actionDescription = `You melee the nearby enemy for ${damage} damage.`;
   } else if (action === 'ranged') {
     damage = player.ranged;
@@ -288,11 +331,14 @@ function handlePlayerAction(action) {
   }
 
   if (damage > 0) {
-    enemy.health = Math.max(0, enemy.health - damage);
+    target.health = Math.max(0, target.health - damage);
     logMessage(actionDescription, 'success');
+    if (target.health <= 0) {
+      logMessage(`${target.name} down!`, 'success');
+    }
     updateUi();
 
-    if (enemy.health <= 0) {
+    if (enemies.filter((enemy) => enemy.health > 0).length === 0) {
       handleEnemyDefeated();
     }
   }
@@ -300,23 +346,26 @@ function handlePlayerAction(action) {
 
 function enemyMoveTowardPlayer() {
   if (gameOver || isWaitingForUpgrade) return;
-  const dx = player.position.x - enemy.position.x;
-  const dy = player.position.y - enemy.position.y;
-  const nextPos = { ...enemy.position };
+  enemies.forEach((enemyObj) => {
+    if (enemyObj.health <= 0) return;
+    const dx = player.position.x - enemyObj.position.x;
+    const dy = player.position.y - enemyObj.position.y;
+    const nextPos = { ...enemyObj.position };
 
-  if (Math.abs(dx) > Math.abs(dy)) {
-    nextPos.x += Math.sign(dx);
-  } else {
-    nextPos.y += Math.sign(dy);
-  }
+    if (Math.abs(dx) > Math.abs(dy)) {
+      nextPos.x += Math.sign(dx);
+    } else {
+      nextPos.y += Math.sign(dy);
+    }
 
-  if (canMoveTo(nextPos.x, nextPos.y)) {
-    enemy.position = nextPos;
-  }
+    if (canMoveTo(nextPos.x, nextPos.y)) {
+      enemyObj.position = nextPos;
+    }
+  });
 }
 
 function handleEnemyDefeated() {
-  logMessage(`Enemy defeated! You cleared ${levels[currentLevelIndex].name}.`, 'success');
+  logMessage(`All enemies defeated! You cleared ${levels[currentLevelIndex].name}.`, 'success');
   currentLevelIndex += 1;
   if (currentLevelIndex >= levels.length) {
     finishGame(true);
@@ -329,13 +378,19 @@ function handleEnemyDefeated() {
   logMessage('Choose an upgrade before the next level.', 'info');
 }
 
-function chooseEnemyMove() {
+function chooseEnemyMove(type) {
   const roll = Math.random();
-  if (enemy.type === 'Zombie') {
+  if (type === 'Zombie') {
     return roll < 0.65 ? 'Swipe' : 'Lunge';
   }
-  if (enemy.type === 'Big Zombie') {
+  if (type === 'Big Zombie') {
     return roll < 0.5 ? 'Heavy Slam' : 'Stomp';
+  }
+  if (type === 'Coach') {
+    return roll < 0.55 ? 'Heavy Slam' : 'Power Strike';
+  }
+  if (type === 'Librarian') {
+    return roll < 0.6 ? 'Shush' : 'Book Toss';
   }
   return roll < 0.6 ? 'Rifle Shot' : 'Bayonet Strike';
 }
@@ -384,48 +439,66 @@ function startGameLoop() {
     
     enemyMoveTowardPlayer();
     
-    const dx = Math.abs(player.position.x - enemy.position.x);
-    const dy = Math.abs(player.position.y - enemy.position.y);
-    const isAdjacent = (dx <= 1 && dy <= 1) && !(dx === 0 && dy === 0);
+    const adjacentEnemies = enemies.filter((enemyObj) => {
+      const dx = Math.abs(player.position.x - enemyObj.position.x);
+      const dy = Math.abs(player.position.y - enemyObj.position.y);
+      return enemyObj.health > 0 && (dx <= 1 && dy <= 1) && !(dx === 0 && dy === 0);
+    });
     
-    if (isAdjacent) {
-      const move = chooseEnemyMove();
+    adjacentEnemies.forEach((enemyObj) => {
+      const move = chooseEnemyMove(enemyObj.type);
       let damage = 0;
       let text = '';
 
-      if (enemy.type === 'Zombie') {
+      if (enemyObj.type === 'Zombie') {
         if (move === 'Swipe') {
-          damage = enemy.baseDamage;
+          damage = enemyObj.baseDamage;
           text = `Zombie uses Swipe for ${damage} damage.`;
         } else {
-          damage = enemy.baseDamage + 4;
+          damage = enemyObj.baseDamage + 4;
           text = `Zombie lunges forward with a Lunge for ${damage} damage.`;
         }
-      } else if (enemy.type === 'Big Zombie') {
+      } else if (enemyObj.type === 'Big Zombie') {
         if (move === 'Heavy Slam') {
-          damage = enemy.baseDamage + 6;
+          damage = enemyObj.baseDamage + 6;
           text = `Big Zombie slams the ground for ${damage} damage.`;
         } else {
-          damage = enemy.baseDamage + 4;
+          damage = enemyObj.baseDamage + 4;
           text = `Big Zombie stomps you, dealing ${damage} damage!`;
+        }
+      } else if (enemyObj.type === 'Coach') {
+        if (move === 'Heavy Slam') {
+          damage = enemyObj.baseDamage + 8;
+          text = `Coach charges with a Heavy Slam for ${damage} damage.`;
+        } else {
+          damage = enemyObj.baseDamage + 5;
+          text = `Coach closes in with a brutal strike for ${damage} damage!`;
+        }
+      } else if (enemyObj.type === 'Librarian') {
+        if (move === 'Shush') {
+          damage = enemyObj.baseDamage + 4;
+          text = `Librarian forces silence with Shush for ${damage} damage.`;
+        } else {
+          damage = enemyObj.baseDamage + 6;
+          text = `Librarian throws a stack of books for ${damage} damage!`;
         }
       } else {
         if (move === 'Rifle Shot') {
-          damage = enemy.baseDamage + 6;
-          text = `Military Troop lands a Rifle Shot for ${damage} damage.`;
+          damage = enemyObj.baseDamage + 6;
+          text = `${enemyObj.type} lands a Rifle Shot for ${damage} damage.`;
         } else {
-          damage = enemy.baseDamage + 2;
-          text = `Military Troop does a Bayonet Strike for ${damage} damage.`;
+          damage = enemyObj.baseDamage + 2;
+          text = `${enemyObj.type} does a Bayonet Strike for ${damage} damage.`;
         }
       }
 
       player.health = Math.max(0, player.health - damage);
       logMessage(text, 'danger');
-      
-      if (player.health <= 0) {
-        finishGame(false);
-        return;
-      }
+    });
+    
+    if (player.health <= 0) {
+      finishGame(false);
+      return;
     }
     
     updateUi();

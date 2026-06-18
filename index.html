@@ -39,19 +39,17 @@
       </div>
 
       <div class="arena">
-        <div class="map-shell">
+        <div class="scene-panel">
           <div class="map-header">
-            <h2>Live Map</h2>
-            <p id="map-hint">Navigate the level while the enemy closes in.</p>
+            <h2>Live Scene</h2>
+            <p id="map-hint">Navigate directly through the background while the enemy closes in.</p>
           </div>
-          <div class="map-grid" id="map-grid"></div>
-        </div>
-
-        <div class="scene-shell">
-          <div class="sprite player-sprite">
-            <img id="player-sprite" src="characters/gary.png" alt="Gary">
+          <div class="scene-shell" id="scene-shell">
+            <div class="scene-character player" id="player-character">
+              <img src="characters/gary.png" alt="Gary">
+            </div>
+            <div class="enemy-characters" id="enemy-characters"></div>
           </div>
-          <div class="sprite enemy-sprite" id="enemy-sprite"></div>
         </div>
       </div>
     </section>
