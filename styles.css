@@ -130,6 +130,82 @@ header p {
   object-fit: contain;
 }
 
+.scene-weapon {
+  position: absolute;
+  width: 90px;
+  height: 90px;
+  display: none;
+  place-items: center;
+  transform: translate(-50%, -50%) scale(0.8);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 55;
+}
+
+.scene-weapon.active {
+  display: grid;
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.05);
+}
+
+.scene-weapon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.projectile {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  background-image: url('weapons/bullet.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: left 0.35s ease-out, top 0.35s ease-out;
+  z-index: 45;
+}
+
+.final-popup {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 100;
+}
+
+.final-popup.hidden {
+  display: none;
+}
+
+.final-popup-panel {
+  width: min(92vw, 420px);
+  background: rgba(18, 22, 35, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 32px 64px rgba(0, 0, 0, 0.45);
+  border-radius: 24px;
+  padding: 28px;
+  text-align: center;
+}
+
+.final-popup-panel h2 {
+  margin-top: 0;
+  font-size: 1.5rem;
+}
+
+.final-popup-panel p {
+  margin: 16px 0 0;
+  color: var(--text);
+}
+
+.final-popup-panel button {
+  width: 100%;
+  margin-top: 24px;
+}
+
 .upgrade-overlay {
   position: fixed;
   inset: 0;
@@ -151,6 +227,63 @@ header p {
   box-shadow: 0 32px 64px rgba(0, 0, 0, 0.45);
   border-radius: 24px;
   padding: 28px;
+}
+
+.upgrade-name-box {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+}
+
+.upgrade-name-box.hidden {
+  display: none;
+}
+
+.upgrade-name-box div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.95rem;
+}
+
+.upgrade-name-box strong {
+  font-weight: 700;
+}
+
+.upgrade-preview {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.upgrade-choice {
+  width: 120px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  display: grid;
+  gap: 10px;
+  align-items: center;
+  text-align: center;
+}
+
+.upgrade-choice img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.upgrade-choice p {
+  margin: 0;
+  font-size: 0.95rem;
 }
 
 .upgrade-overlay .upgrade-panel h2 {

@@ -105,12 +105,22 @@ let currentMap = [];
 let isWaitingForUpgrade = false;
 let gameOver = false;
 let gameLoopInterval = null;
+let isShootCooldown = false;
+const shootCooldownMs = 600;
 
 const mapHintEl = document.getElementById('map-hint');
 const arenaEl = document.querySelector('.arena');
 const sceneShellEl = document.getElementById('scene-shell');
 const playerCharacterEl = document.getElementById('player-character');
+const weaponSpriteEl = document.getElementById('weapon-sprite');
 const enemyCharacterEl = document.getElementById('enemy-characters');
+const meleeUpgradePreviewEl = document.getElementById('melee-upgrade-preview');
+const rangedUpgradePreviewEl = document.getElementById('ranged-upgrade-preview');
+const upgradeNameBoxEl = document.getElementById('upgrade-name-box');
+const meleeUpgradeNameEl = document.getElementById('melee-upgrade-name');
+const rangedUpgradeNameEl = document.getElementById('ranged-upgrade-name');
+const finalPopupEl = document.getElementById('final-popup');
+const finalRestartButton = document.getElementById('final-restart-button');
 
 const levelNameEl = document.getElementById('level-name');
 const levelCounterEl = document.getElementById('level-counter');
@@ -146,6 +156,7 @@ function initGame() {
   endPanel.classList.add('hidden');
   upgradeOverlay.classList.add('hidden');
   if (gameLoopInterval) clearInterval(gameLoopInterval);
+  finalPopupEl?.classList.add('hidden');
   setEnemyForCurrentLevel();
   updateUi();
   logMessage('The school is crawling with enemies. Use the map to move and survive through 7 levels!');
@@ -189,7 +200,7 @@ function updateUi() {
   enemyTypeEl.textContent = aliveEnemies.length > 1 ? 'Multiple' : aliveEnemies[0]?.type || '---';
   const disabled = gameOver || isWaitingForUpgrade;
   meleeButton.disabled = disabled;
-  rangedButton.disabled = disabled;
+  rangedButton.disabled = disabled || isShootCooldown;
   renderScene();
 }
 
@@ -285,14 +296,62 @@ function movePlayer(direction) {
   updateUi();
 }
 
-function canMoveTo(x, y) {
+function isEnemyAt(x, y, ignoreId = null) {
+  return enemies.some((enemy) => {
+    if (enemy.health <= 0) return false;
+    if (ignoreId && enemy.id === ignoreId) return false;
+    return enemy.position.x === x && enemy.position.y === y;
+  });
+}
+
+function canMoveTo(x, y, ignoreId = null) {
   return (
     y >= 0 &&
     y < currentMap.length &&
     x >= 0 &&
     x < currentMap[0].length &&
-    currentMap[y][x] !== 'wall'
+    currentMap[y][x] !== 'wall' &&
+    !isEnemyAt(x, y, ignoreId) &&
+    !(player.position.x === x && player.position.y === y)
   );
+}
+
+function getNextMeleeSprite() {
+  const nextLevel = Math.min(player.meleeLevel + 1, 7);
+  return `weapons/melee${nextLevel}.png`;
+}
+
+function getNextRangedSprite() {
+  const nextGunLevel = Math.min(player.gunLevel + 1, 7);
+  if (nextGunLevel === 1) return 'weapons/paperbullet.png';
+  if (nextGunLevel >= 7) return 'weapons/goldbullet.png';
+  return 'weapons/bullet.png';
+}
+
+function updateUpgradePreview() {
+  const nextMeleeLevel = Math.min(player.meleeLevel + 1, 7);
+  const nextGunLevel = Math.min(player.gunLevel + 1, 7);
+  const isMeleeFinalUpgrade = nextMeleeLevel === 7;
+  const isRangedFinalUpgrade = nextGunLevel === 7;
+  const showNameBox = isMeleeFinalUpgrade || isRangedFinalUpgrade;
+
+  if (meleeUpgradePreviewEl) {
+    meleeUpgradePreviewEl.querySelector('img').src = getNextMeleeSprite();
+    meleeUpgradePreviewEl.querySelector('p').textContent = isMeleeFinalUpgrade ? 'Diamond is Unbreakable' : `Melee → Level ${nextMeleeLevel}`;
+  }
+  if (rangedUpgradePreviewEl) {
+    rangedUpgradePreviewEl.querySelector('img').src = getNextRangedSprite();
+    rangedUpgradePreviewEl.querySelector('p').textContent = isRangedFinalUpgrade ? 'Golden Wind' : `Ranged → Gun ${nextGunLevel}`;
+  }
+  if (upgradeNameBoxEl && meleeUpgradeNameEl && rangedUpgradeNameEl) {
+    if (showNameBox) {
+      upgradeNameBoxEl.classList.remove('hidden');
+      meleeUpgradeNameEl.textContent = isMeleeFinalUpgrade ? 'Diamond is Unbreakable' : `Melee Level ${nextMeleeLevel}`;
+      rangedUpgradeNameEl.textContent = isRangedFinalUpgrade ? 'Golden Wind' : `Ranged Gun ${nextGunLevel}`;
+    } else {
+      upgradeNameBoxEl.classList.add('hidden');
+    }
+  }
 }
 
 function getNearestEnemy() {
@@ -305,8 +364,45 @@ function getNearestEnemy() {
     })[0];
 }
 
+function getPlayerBulletSprite() {
+  if (player.gunLevel === 1) {
+    return 'weapons/paperbullet.png';
+  }
+  if (player.gunLevel >= 7) {
+    return 'weapons/goldbullet.png';
+  }
+  return 'weapons/bullet.png';
+}
+
+function getPlayerWeaponSprite(action) {
+  if (action === 'ranged') {
+    return getPlayerBulletSprite();
+  }
+  return `weapons/melee${player.meleeLevel}.png`;
+}
+
+function showWeaponUse(action) {
+  if (!weaponSpriteEl || !sceneShellEl) return;
+  const totalRows = currentMap.length;
+  const totalCols = currentMap[0]?.length || 1;
+  const playerX = (player.position.x / (totalCols - 1)) * 100;
+  const playerY = (player.position.y / (totalRows - 1)) * 100;
+  weaponSpriteEl.innerHTML = `<img src="${getPlayerWeaponSprite(action)}" alt="Weapon">`;
+  weaponSpriteEl.style.left = `${playerX}%`;
+  weaponSpriteEl.style.top = `${playerY}%`;
+  weaponSpriteEl.classList.add('active');
+
+  setTimeout(() => {
+    weaponSpriteEl.classList.remove('active');
+  }, 250);
+}
+
 function handlePlayerAction(action) {
   if (gameOver || isWaitingForUpgrade) return;
+  if (action === 'ranged' && isShootCooldown) {
+    logMessage('Ranged weapon is cooling down.', 'info');
+    return;
+  }
 
   const target = getNearestEnemy();
   if (!target) return;
@@ -331,6 +427,17 @@ function handlePlayerAction(action) {
   }
 
   if (damage > 0) {
+    showWeaponUse(action);
+    if (action === 'ranged') {
+      showProjectile(player.position, target.position, getPlayerBulletSprite());
+      isShootCooldown = true;
+      rangedButton.disabled = true;
+      setTimeout(() => {
+        isShootCooldown = false;
+        updateUi();
+      }, shootCooldownMs);
+    }
+
     target.health = Math.max(0, target.health - damage);
     logMessage(actionDescription, 'success');
     if (target.health <= 0) {
@@ -346,6 +453,14 @@ function handlePlayerAction(action) {
 
 function enemyMoveTowardPlayer() {
   if (gameOver || isWaitingForUpgrade) return;
+
+  const occupied = new Set(
+    enemies
+      .filter((enemyObj) => enemyObj.health > 0)
+      .map((enemyObj) => `${enemyObj.position.x},${enemyObj.position.y}`)
+  );
+  const planned = new Set();
+
   enemies.forEach((enemyObj) => {
     if (enemyObj.health <= 0) return;
     const dx = player.position.x - enemyObj.position.x;
@@ -358,7 +473,10 @@ function enemyMoveTowardPlayer() {
       nextPos.y += Math.sign(dy);
     }
 
-    if (canMoveTo(nextPos.x, nextPos.y)) {
+    const key = `${nextPos.x},${nextPos.y}`;
+    if (canMoveTo(nextPos.x, nextPos.y, enemyObj.id) && !planned.has(key) && !occupied.has(key)) {
+      planned.add(key);
+      occupied.delete(`${enemyObj.position.x},${enemyObj.position.y}`);
       enemyObj.position = nextPos;
     }
   });
@@ -374,6 +492,7 @@ function handleEnemyDefeated() {
   isWaitingForUpgrade = true;
   if (gameLoopInterval) clearInterval(gameLoopInterval);
   updateUi();
+  updateUpgradePreview();
   upgradeOverlay.classList.remove('hidden');
   logMessage('Choose an upgrade before the next level.', 'info');
 }
@@ -418,6 +537,32 @@ function handleUpgrade(choice) {
   startGameLoop();
 }
 
+function showProjectile(from, to, sprite) {
+  if (!sceneShellEl) return;
+  const totalRows = currentMap.length;
+  const totalCols = currentMap[0]?.length || 1;
+  const rect = sceneShellEl.getBoundingClientRect();
+  const fromX = (from.x / (totalCols - 1)) * rect.width;
+  const fromY = (from.y / (totalRows - 1)) * rect.height;
+  const toX = (to.x / (totalCols - 1)) * rect.width;
+  const toY = (to.y / (totalRows - 1)) * rect.height;
+  const projectile = document.createElement('div');
+  projectile.className = 'projectile';
+  projectile.style.left = `${fromX}px`;
+  projectile.style.top = `${fromY}px`;
+  projectile.style.backgroundImage = `url('${sprite}')`;
+  sceneShellEl.appendChild(projectile);
+
+  requestAnimationFrame(() => {
+    projectile.style.left = `${toX}px`;
+    projectile.style.top = `${toY}px`;
+  });
+
+  setTimeout(() => {
+    projectile.remove();
+  }, 420);
+}
+
 function finishGame(victory) {
   gameOver = true;
   if (gameLoopInterval) clearInterval(gameLoopInterval);
@@ -425,9 +570,12 @@ function finishGame(victory) {
   if (victory) {
     endTitle.textContent = 'You survived all levels! Victory!';
     logMessage('You cleared the final level and escaped the zombie school!', 'success');
+    finalPopupEl.classList.remove('hidden');
+    endPanel.classList.add('hidden');
   } else {
     endTitle.textContent = 'You were defeated...';
     logMessage('The monsters proved too strong this time. Try again.', 'danger');
+    endPanel.classList.remove('hidden');
   }
   updateUi();
 }
@@ -486,6 +634,7 @@ function startGameLoop() {
         if (move === 'Rifle Shot') {
           damage = enemyObj.baseDamage + 6;
           text = `${enemyObj.type} lands a Rifle Shot for ${damage} damage.`;
+          showProjectile(enemyObj.position, player.position);
         } else {
           damage = enemyObj.baseDamage + 2;
           text = `${enemyObj.type} does a Bayonet Strike for ${damage} damage.`;
@@ -510,6 +659,7 @@ rangedButton.addEventListener('click', () => handlePlayerAction('ranged'));
 upgradeMeleeButton.addEventListener('click', () => handleUpgrade('melee'));
 upgradeRangedButton.addEventListener('click', () => handleUpgrade('ranged'));
 restartButton.addEventListener('click', initGame);
+finalRestartButton.addEventListener('click', initGame);
 
 document.addEventListener('keydown', (event) => {
   if (gameOver || isWaitingForUpgrade) return;

@@ -48,6 +48,7 @@
             <div class="scene-character player" id="player-character">
               <img src="characters/gary.png" alt="Gary">
             </div>
+            <div class="scene-weapon" id="weapon-sprite"></div>
             <div class="enemy-characters" id="enemy-characters"></div>
           </div>
         </div>
@@ -63,6 +64,26 @@
       <div class="upgrade-overlay hidden" id="upgrade-overlay">
         <div class="upgrade-panel">
           <h2>Choose Your Upgrade</h2>
+          <div class="upgrade-name-box hidden" id="upgrade-name-box">
+            <div>
+              <span>Melee:</span>
+              <strong id="melee-upgrade-name">Melee Upgrade</strong>
+            </div>
+            <div>
+              <span>Ranged:</span>
+              <strong id="ranged-upgrade-name">Ranged Upgrade</strong>
+            </div>
+          </div>
+          <div class="upgrade-preview">
+            <div class="upgrade-choice" id="melee-upgrade-preview">
+              <img src="weapons/melee1.png" alt="Melee upgrade">
+              <p>Melee Upgrade</p>
+            </div>
+            <div class="upgrade-choice" id="ranged-upgrade-preview">
+              <img src="weapons/paperbullet.png" alt="Ranged upgrade">
+              <p>Ranged Upgrade</p>
+            </div>
+          </div>
           <button id="upgrade-melee">Upgrade Melee</button>
           <button id="upgrade-ranged">Upgrade Ranged</button>
         </div>
@@ -70,6 +91,13 @@
       <div class="end-panel hidden" id="end-panel">
         <h2 id="end-title">Game Over</h2>
         <button id="restart-button">Restart Game</button>
+      </div>
+      <div class="final-popup hidden" id="final-popup">
+        <div class="final-popup-panel">
+          <h2>Final Escape!</h2>
+          <p>You beat all 7 levels and escaped the zombie school.</p>
+          <button id="final-restart-button">Play Again</button>
+        </div>
       </div>
     </section>
   </div>
